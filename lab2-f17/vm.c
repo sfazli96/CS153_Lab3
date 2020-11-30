@@ -312,8 +312,11 @@ clearpteu(pde_t *pgdir, char *uva)
 
 // Given a parent process's page table, create a copy
 // of it for a child.
+// This copyuvm is going to copy the address space of the parent process to the child process. Since we change the placement of the stack
+// we have to copy the contents of the stack over to the child process properly. We then have to copy the pages of the stack over to the child process too.
+//
 pde_t*
-copyuvm(pde_t *pgdir, uint sz)
+copyuvm(pde_t *pgdir, uint sz) 
 {
   pde_t *d;
   pte_t *pte;
@@ -332,15 +335,35 @@ copyuvm(pde_t *pgdir, uint sz)
     if((mem = kalloc()) == 0)
       goto bad;
     memmove(mem, (char*)P2V(pa), PGSIZE);
-    if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0)
+    if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0) {
+      kfree(mem);
       goto bad;
   }
-  return d;
+}
+
+for(x = PGROUNDUP(STACK_TOP - (PGSIZE*myproc()->pgNUM)); x < STACK_TOP; x += PGSIZE) {
+ if((pte = walkpgdir(pgdir, (void *) x, 0)) == 0)
+   panic("copyuvm:pte should exist");
+ if(!(*pte & PTE_P))
+   panic("copyuvm: page is not present");
+ pa = PTE_ADDR(*pte);
+ flags = PTE_FLAGS(*pte);
+ if((mem = kalloc()) == 0)
+   goto bad;
+ memmove(mem, (char*)P2V(pa), PGSIZE);
+ if(mappage(d, (void*)x, PGSIZE, V2P(mem), flags) < 0) {
+   kfree(mem);
+   goto bad;
+  }
+}
+
+return d;
 
 bad:
   freevm(d);
   return 0;
 }
+  
 
 //PAGEBREAK!
 // Map user virtual address to kernel address.
