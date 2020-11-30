@@ -13,6 +13,8 @@ struct gatedesc idt[256];
 extern uint vectors[];  // in vectors.S: array of 256 entry pointers
 struct spinlock tickslock;
 uint ticks;
+uint faultAddress;
+
 
 void
 tvinit(void)
@@ -38,11 +40,11 @@ trap(struct trapframe *tf)
 {
   if(tf->trapno == T_SYSCALL){
     if(myproc()->killed)
-      exit();
+      exit(0);
     myproc()->tf = tf;
     syscall();
     if(myproc()->killed)
-      exit();
+      exit(0);
     return;
   }
 
@@ -77,6 +79,22 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
+// This is for Lab3
+// This we define T_PGFLT. We implement it, we check some errors for faultAddress if its valid or not. We would need to allocate more pages 
+// for the stack. We do this by building the address we had a trap occur which was PGSIZE up to the faultAddress. Then this would allocate a new 
+// page for the stack which will allow us to update the number of pages the stack currently has
+  case T_PGFLT:
+   if((faultAddress = rcr2()) == -1)  {
+      myproc()->killed = -1;
+      break;
+   }
+   if(allocuvm(myproc()->pgdir, faultAddress - PGSIZE, faultAddress) == 0 ) {
+         myproc()->killed = 1;
+         exit(0);
+   }
+   myproc()->pgNum += 1;
+   cprintf("case T_PGFLT from trap.c: allocuvm succeeded. Number of pages allocuvm %d\n", myproc()->pgNum);
+   break;
 
   //PAGEBREAK: 13
   default:
@@ -98,7 +116,7 @@ trap(struct trapframe *tf)
   // (If it is still executing in the kernel, let it keep running
   // until it gets to the regular system call return.)
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)
-    exit();
+    exit(0);
 
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
@@ -108,5 +126,5 @@ trap(struct trapframe *tf)
 
   // Check if the process has been killed since we yielded
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)
-    exit();
+    exit(0);
 }

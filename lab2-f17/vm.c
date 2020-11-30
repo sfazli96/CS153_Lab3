@@ -321,6 +321,7 @@ copyuvm(pde_t *pgdir, uint sz)
   pde_t *d;
   pte_t *pte;
   uint pa, i, flags;
+  uint x;
   char *mem;
 
   if((d = setupkvm()) == 0)
@@ -341,7 +342,7 @@ copyuvm(pde_t *pgdir, uint sz)
   }
 }
 
-for(x = PGROUNDUP(STACK_TOP - (PGSIZE*myproc()->pgNUM)); x < STACK_TOP; x += PGSIZE) {
+for(x = PGROUNDUP(STACK_TOP - (PGSIZE*myproc()->pgNum)); x < STACK_TOP; x += PGSIZE) {
  if((pte = walkpgdir(pgdir, (void *) x, 0)) == 0)
    panic("copyuvm:pte should exist");
  if(!(*pte & PTE_P))
@@ -351,7 +352,7 @@ for(x = PGROUNDUP(STACK_TOP - (PGSIZE*myproc()->pgNUM)); x < STACK_TOP; x += PGS
  if((mem = kalloc()) == 0)
    goto bad;
  memmove(mem, (char*)P2V(pa), PGSIZE);
- if(mappage(d, (void*)x, PGSIZE, V2P(mem), flags) < 0) {
+ if(mappages(d, (void*)x, PGSIZE, V2P(mem), flags) < 0) {
    kfree(mem);
    goto bad;
   }
