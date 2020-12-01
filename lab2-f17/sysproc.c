@@ -111,3 +111,8 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+int 
+sys_lab3(void) {
+ return 0;
+}
