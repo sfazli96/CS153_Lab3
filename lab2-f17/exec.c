@@ -62,11 +62,14 @@ exec(char *path, char **argv)
 
   // Allocate two pages at the next page boundary.
   // Make the first inaccessible.  Use the second as the user stack.
+  curproc->pgNum = 1; // Set curproc's page number to 1
   sz = PGROUNDUP(sz);
-  if((sz = allocuvm(pgdir, sz, sz + 2*PGSIZE)) == 0)
+
+  // Stack now builds right below the kernal address space and uses STACK_TOP to do so
+  // Also changed the argument so that result of allocuvm takes in parameters from STACK_TOP and returns it to sp instead of sz
+  // Breaks if already at the top of STACK_TOP
+  if((sp = allocuvm(pgdir, STACK_TOP - PGSIZE, STACK_TOP)) == 0)
     goto bad;
-  clearpteu(pgdir, (char*)(sz - 2*PGSIZE));
-  sp = sz;
 
   // Push argument strings, prepare rest of stack in ustack.
   for(argc = 0; argv[argc]; argc++) {
