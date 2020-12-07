@@ -339,30 +339,30 @@ copyuvm(pde_t *pgdir, uint sz)
     if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0) {
       kfree(mem);
       goto bad;
+    }
   }
-}
 
-for(x = PGROUNDUP(STACK_TOP - (PGSIZE*myproc()->pgNum)); x < STACK_TOP; x += PGSIZE) {
- if((pte = walkpgdir(pgdir, (void *) x, 0)) == 0)
-   panic("copyuvm:pte should exist");
- if(!(*pte & PTE_P))
-   panic("copyuvm: page is not present");
- pa = PTE_ADDR(*pte);
- flags = PTE_FLAGS(*pte);
- if((mem = kalloc()) == 0)
-   goto bad;
- memmove(mem, (char*)P2V(pa), PGSIZE);
- if(mappages(d, (void*)x, PGSIZE, V2P(mem), flags) < 0) {
-   kfree(mem);
-   goto bad;
+  for(x = PGROUNDUP(STACK_TOP - (PGSIZE*myproc()->pgNum)); x < STACK_TOP; x += PGSIZE) {
+   if((pte = walkpgdir(pgdir, (void *) x, 0)) == 0)
+     panic("copyuvm:pte should exist");
+   if(!(*pte & PTE_P))
+     panic("copyuvm: page is not present");
+   pa = PTE_ADDR(*pte);
+   flags = PTE_FLAGS(*pte);
+   if((mem = kalloc()) == 0)
+     goto bad;
+   memmove(mem, (char*)P2V(pa), PGSIZE);
+   if(mappages(d, (void*)x, PGSIZE, V2P(mem), flags) < 0) {
+     kfree(mem);
+     goto bad;
+   }
   }
-}
 
-return d;
+  return d;
 
-bad:
-  freevm(d);
-  return 0;
+  bad:
+    freevm(d);
+    return 0;
 }
   
 

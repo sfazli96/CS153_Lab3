@@ -51,7 +51,7 @@ struct proc {
   char name[16];               // Process name (debugging)
   int exitStatus;
   int priority;
-  uint pgNum;
+  uint pgNum;			// Integer for page number, for Lab 3
                 
 };
 
